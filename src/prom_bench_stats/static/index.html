@@ -76,6 +76,14 @@
       margin-bottom: 1.25rem;
     }
     .controls { display: flex; flex-wrap: wrap; gap: 0.85rem; align-items: flex-end; }
+    .time-controls { display: flex; flex-direction: column; gap: 0.35rem; }
+    .time-label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.78rem; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .time-buttons { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+    .time-btn { padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg1); color: var(--muted); cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s; }
+    .time-btn:hover { border-color: var(--accent); color: var(--text); }
+    .time-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .window-controls { display: flex; align-items: center; gap: 0.5rem; }
+    #window-label { font-size: 0.85rem; color: var(--text); white-space: nowrap; }
     label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.78rem; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
     input {
       padding: 0.55rem 0.75rem;
@@ -87,7 +95,6 @@
       font-family: inherit;
       min-width: 5rem;
     }
-    input#query { min-width: min(100%, 28rem); font-family: ui-monospace, monospace; font-size: 0.88rem; }
     button {
       cursor: pointer;
       padding: 0.55rem 1.1rem;
@@ -261,24 +268,26 @@
     }
     #grafana-dash-grid {
       display: grid;
-      grid-template-columns: repeat(24, minmax(0, 1fr));
-      gap: 10px;
-      grid-auto-rows: minmax(24px, auto);
-      align-items: stretch;
+      grid-template-columns: repeat(24, 1fr);
+      gap: 0.75rem;
+      grid-auto-rows: minmax(80px, auto);
+      align-items: start;
     }
     .gf-dash-panel {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 0.85rem 1rem;
-      overflow: auto;
-      min-height: 200px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 140px;
     }
     .gf-chart-combined {
       margin-top: 0.35rem;
     }
     .gf-chart-combined .chart-inner {
-      min-height: 380px;
+      min-height: 220px;
     }
     .gf-dash-panel h3 {
       margin: 0 0 0.5rem;
@@ -311,6 +320,15 @@
       color: #fb7185;
       margin-bottom: 0.35rem;
     }
+    .gf-no-data {
+      font-size: 0.82rem;
+      color: #c4b5fd;
+      padding: 0.7rem 0.85rem;
+      border: 1px dashed rgba(196, 181, 253, 0.5);
+      border-radius: 10px;
+      background: rgba(99, 102, 241, 0.08);
+      margin-top: 0.35rem;
+    }
     select#step-select {
       min-width: 5.5rem;
       cursor: pointer;
@@ -322,7 +340,7 @@
     <header>
       <div class="brand">
         <h1>SigmaProm</h1>
-        <p>Plots Prometheus <code>query_range</code> only—no SigmaProm moving average. <strong>Grafana panel moving averages</strong> that are not in PromQL are not in the JSON and are not applied. PromQL windows (<code>avg_over_time</code>, etc.) still smooth inside Prometheus. Use <strong>Step</strong> for finer raw points. Dashboard render groups panels like Grafana’s grid.</p>
+        <p>Import Grafana dashboard JSON and render raw Prometheus query_range results in a grid layout.</p>
       </div>
       <div class="status">
         <div class="pill" id="conn-pill">
@@ -335,9 +353,32 @@
 
     <div class="panel">
       <form class="controls" id="form">
+        <input type="hidden" id="minutes" value="5" />
+        <div class="time-controls">
+          <label class="time-label">
+            Time Window
+            <div class="time-buttons">
+              <button type="button" class="time-btn active" data-minutes="5">5m</button>
+              <button type="button" class="time-btn" data-minutes="15">15m</button>
+              <button type="button" class="time-btn" data-minutes="30">30m</button>
+              <button type="button" class="time-btn" data-minutes="60">1h</button>
+              <button type="button" class="time-btn" data-minutes="360">6h</button>
+              <button type="button" class="time-btn" data-minutes="1440">1d</button>
+            </div>
+          </label>
+          <div class="window-controls">
+            <button type="button" id="shift-back" class="secondary" title="Move window back">◀◀</button>
+            <span id="window-label">Last 30m</span>
+            <button type="button" id="shift-forward" class="secondary" title="Move window forward">▶▶</button>
+          </div>
+        </div>
         <label>
-          Last (minutes)
-          <input type="number" id="minutes" value="30" min="0.1" step="0.1" />
+          From
+          <input type="datetime-local" id="from-time" />
+        </label>
+        <label>
+          To
+          <input type="datetime-local" id="to-time" />
         </label>
         <label>
           Step
@@ -352,52 +393,21 @@
             <option value="120s">120s</option>
           </select>
         </label>
-        <label style="flex: 1;">
-          PromQL
-          <input type="text" id="query" value="up" list="metric-list" spellcheck="false" autocomplete="off" placeholder="e.g. up or http_requests_total" />
+        <label class="row-inline" style="align-items: center; gap: 0.5rem;">
+          <input type="checkbox" id="auto-refresh" checked />
+          Auto refresh
         </label>
-        <button type="submit" id="load">Load</button>
-        <button type="button" class="secondary" id="metrics-btn" title="Fetch metric names from Prometheus">Metric names</button>
-        <div class="toggles">
-          <label class="row-inline" title="Default: one chart, all series in different colors. Check to split into separate charts.">
-            <input type="checkbox" id="split-per-series" />
-            Split: one chart per series
-          </label>
-        </div>
+        <button type="submit" id="grafana-render-dash">Render dashboard</button>
       </form>
-      <datalist id="metric-list"></datalist>
-      <div id="metric-panel" class="metric-panel" hidden>
-        <div class="metric-panel-head">
-          <span id="metric-panel-label">Metric names (click to use)</span>
-          <button type="button" class="secondary" id="metric-panel-hide">Hide list</button>
-        </div>
-        <div id="metric-list-visible" class="metric-list-visible"></div>
-      </div>
 
       <div class="metric-panel" id="grafana-section" style="margin-top: 1rem;">
         <div class="metric-panel-head">
           <span>Import from Grafana (dashboard JSON)</span>
         </div>
         <p style="margin: 0 0 0.75rem; font-size: 0.82rem; color: var(--muted); line-height: 1.45;">
-          In Grafana: open the dashboard → top-right <strong>Share</strong> (or gear → <strong>JSON Model</strong>) → export / copy JSON. Paste here, then click <strong>Extract panel queries</strong>. Same PromQL as your panels; click a line to load it. If the query uses Grafana variables (<code>$job</code>, <code>$__rate_interval</code>, …), edit them for plain Prometheus.
+          In Grafana: open the dashboard → top-right <strong>Share</strong> (or gear → <strong>JSON Model</strong>) → export / copy JSON. Paste full dashboard JSON here, then click Render dashboard. Leave From/To blank to refresh the relative Last window automatically.
         </p>
         <textarea id="grafana-json" class="grafana-ta" placeholder='Paste full dashboard JSON here…'></textarea>
-        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; align-items: center;">
-          <button type="button" class="secondary" id="grafana-extract">Extract panel queries</button>
-          <button type="button" id="grafana-render-dash">Render full dashboard (grid)</button>
-          <label class="row-inline" style="margin-left: 0.25rem;">
-            <input type="checkbox" id="include-flat" />
-            Include flat / empty series
-          </label>
-        </div>
-        <div id="grafana-queries-wrap" class="metric-list-visible" style="margin-top: 0.75rem; max-height: 280px; display: none;"></div>
-      </div>
-
-      <div class="meta-row" id="meta" hidden>
-        <span><strong>Series</strong> <span id="m-series">0</span></span>
-        <span><strong>Sample points</strong> <span id="m-points">0</span></span>
-        <span><strong>Window</strong> last <span id="m-min">0</span> min</span>
-        <span><strong>Prometheus step</strong> <span id="m-step">—</span></span>
       </div>
     </div>
 
@@ -415,470 +425,8 @@
     <div class="charts-grid" id="grid"></div>
   </div>
 
-  <script>
-    const errEl = document.getElementById("err");
-    const emptyHint = document.getElementById("empty-hint");
-    const form = document.getElementById("form");
-    const grid = document.getElementById("grid");
-    const meta = document.getElementById("meta");
-    const charts = [];
-    let dashCharts = [];
-
-    function destroyDashboardCharts() {
-      dashCharts.forEach((c) => c.destroy());
-      dashCharts = [];
-      const dg = document.getElementById("grafana-dash-grid");
-      if (dg) dg.innerHTML = "";
-    }
-
-    function appendPerSeriesCharts(parentEl, per, chartsStore) {
-      per.forEach((s, i) => {
-        const card = document.createElement("div");
-        card.className = "chart-card";
-        const h = document.createElement("h3");
-        h.textContent = s.title || s.metric_name || "Series " + (i + 1);
-        const sub = document.createElement("div");
-        sub.className = "sub";
-        sub.textContent = s.subtitle || "";
-        const inner = document.createElement("div");
-        inner.className = "chart-inner";
-        const canvas = document.createElement("canvas");
-        inner.appendChild(canvas);
-        card.appendChild(h);
-        card.appendChild(sub);
-        card.appendChild(inner);
-        parentEl.appendChild(card);
-
-        const color = s.color || "#818cf8";
-        const ctx = canvas.getContext("2d");
-        const ch = new Chart(ctx, {
-          ...chartOpts(null, color),
-          data: {
-            labels: s.labels,
-            datasets: [
-              {
-                label: s.metric_name,
-                data: s.data,
-                borderColor: color,
-                backgroundColor: color + "33",
-                fill: false,
-                tension: 0,
-                spanGaps: true,
-                pointRadius: s.point_count > 120 ? 0 : 2,
-              },
-            ],
-          },
-        });
-        chartsStore.push(ch);
-      });
-    }
-
-    /**
-     * One Chart.js with multiple colored datasets (series share time axis).
-     * @param {string|null} titleText - optional chart title
-     * @param {boolean} fullWidth - use chart-card--large
-     */
-    function mountCombinedChart(parentEl, c, titleText, chartsStore, fullWidth) {
-      if (!c || !c.datasets || !c.datasets.length) return null;
-      const nLab = (c.labels && c.labels.length) || 0;
-      const pr = nLab > 100 ? 0 : 2;
-      const card = document.createElement("div");
-      card.className = "chart-card" + (fullWidth ? " chart-card--large" : "");
-      if (!fullWidth) card.classList.add("gf-chart-combined");
-      const inner = document.createElement("div");
-      inner.className = "chart-inner";
-      const canvas = document.createElement("canvas");
-      inner.appendChild(canvas);
-      card.appendChild(inner);
-      parentEl.appendChild(card);
-      const multi = c.datasets.length > 1;
-      const ds = c.datasets.map((d) => ({
-        ...d,
-        tension: 0,
-        pointRadius: pr,
-        borderWidth: multi ? 2 : 1.5,
-      }));
-      const ctx = canvas.getContext("2d");
-      const ch = new Chart(ctx, {
-        type: "line",
-        data: { labels: c.labels, datasets: ds },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: "index", intersect: false },
-          plugins: {
-            legend: {
-              display: multi,
-              position: "bottom",
-              labels: {
-                color: "#c4b5fd",
-                boxWidth: 14,
-                padding: 10,
-                font: { size: 11 },
-              },
-            },
-            title: titleText
-              ? { display: true, text: titleText, color: "#e9e4ff", font: { size: 13 } }
-              : { display: false },
-          },
-          scales: {
-            x: {
-              ticks: { color: "#9b92b8", maxTicksLimit: 16 },
-              grid: { color: "rgba(139,92,246,0.12)" },
-            },
-            y: { ticks: { color: "#9b92b8" }, grid: { color: "rgba(139,92,246,0.12)" } },
-          },
-        },
-      });
-      chartsStore.push(ch);
-      return ch;
-    }
-
-    function showErr(msg) {
-      errEl.textContent = msg;
-      errEl.hidden = !msg;
-    }
-    function showEmpty(msg) {
-      emptyHint.textContent = msg;
-      emptyHint.hidden = !msg;
-    }
-
-    function chartOpts(title, color) {
-      return {
-        type: "line",
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: "index", intersect: false },
-          plugins: {
-            legend: { display: false },
-            title: { display: !!title, text: title, color: "#e9e4ff", font: { size: 11 } },
-          },
-          scales: {
-            x: { ticks: { color: "#9b92b8", maxTicksLimit: 8 }, grid: { color: "rgba(139,92,246,0.12)" } },
-            y: { ticks: { color: "#9b92b8" }, grid: { color: "rgba(139,92,246,0.12)" } },
-          },
-        },
-      };
-    }
-
-    async function refreshDiagnostics() {
-      const dot = document.getElementById("conn-dot");
-      const text = document.getElementById("conn-text");
-      const urlEl = document.getElementById("prom-url");
-      try {
-        const r = await fetch("/api/diagnostics");
-        const d = await r.json();
-        urlEl.textContent = d.prometheus_url || "";
-        if (d.error || !d.reachable) {
-          dot.className = "dot bad";
-          text.textContent = d.error ? "Cannot reach Prometheus" : "Unreachable";
-          return;
-        }
-        dot.className = "dot ok";
-        const n = d.instant_up_series;
-        const mcount = d.metric_name_count;
-        text.textContent =
-          n != null
-            ? `Scrape targets (up): ${n} · Metric names: ${mcount ?? "?"}`
-            : "Connected";
-      } catch (e) {
-        document.getElementById("conn-dot").className = "dot bad";
-        document.getElementById("conn-text").textContent = "Diagnostics failed";
-      }
-    }
-
-    function fillMetricList(names) {
-      const dl = document.getElementById("metric-list");
-      const vis = document.getElementById("metric-list-visible");
-      const panel = document.getElementById("metric-panel");
-      const q = document.getElementById("query");
-      dl.innerHTML = "";
-      vis.innerHTML = "";
-      names.forEach((n) => {
-        const o = document.createElement("option");
-        o.value = n;
-        dl.appendChild(o);
-        const b = document.createElement("button");
-        b.type = "button";
-        b.className = "metric-chip";
-        b.textContent = n;
-        b.title = "Use as PromQL metric name";
-        b.addEventListener("click", () => {
-          q.value = n;
-          q.focus();
-        });
-        vis.appendChild(b);
-      });
-      document.getElementById("metric-panel-label").textContent =
-        "Metric names — " + names.length + " loaded (click to paste into PromQL)";
-      panel.hidden = names.length === 0;
-    }
-
-    document.getElementById("metric-panel-hide").addEventListener("click", () => {
-      document.getElementById("metric-panel").hidden = true;
-    });
-
-    document.getElementById("grafana-extract").addEventListener("click", async () => {
-      const raw = document.getElementById("grafana-json").value.trim();
-      const wrap = document.getElementById("grafana-queries-wrap");
-      const qInput = document.getElementById("query");
-      wrap.innerHTML = "";
-      wrap.style.display = "none";
-      if (!raw) {
-        showErr("Paste Grafana dashboard JSON first.");
-        return;
-      }
-      let payload;
-      try {
-        payload = JSON.parse(raw);
-      } catch (e) {
-        showErr("Invalid JSON: " + e.message);
-        return;
-      }
-      const btn = document.getElementById("grafana-extract");
-      btn.disabled = true;
-      try {
-        const r = await fetch("/api/grafana/dashboard-queries", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok) {
-          const d = j.detail;
-          showErr(typeof d === "string" ? d : (r.statusText || "extract failed"));
-          return;
-        }
-        showErr("");
-        const queries = j.queries || [];
-        if (queries.length === 0) {
-          showEmpty(
-            (j.hint || "") + " No expressions found. Export must include panel targets with expr (Prometheus datasource). Try “JSON Model” from dashboard settings."
-          );
-          return;
-        }
-        queries.forEach((text) => {
-          const b = document.createElement("button");
-          b.type = "button";
-          b.className = "grafana-chip";
-          b.title = text;
-          b.textContent = text.length > 120 ? text.slice(0, 118) + "…" : text;
-          b.addEventListener("click", () => {
-            qInput.value = text;
-            qInput.focus();
-          });
-          wrap.appendChild(b);
-        });
-        wrap.style.display = "flex";
-        showEmpty(j.hint || "Click a query to copy it into PromQL, then Load.");
-      } catch (e) {
-        showErr(String(e));
-      } finally {
-        btn.disabled = false;
-      }
-    });
-
-    document.getElementById("grafana-render-dash").addEventListener("click", async () => {
-      const raw = document.getElementById("grafana-json").value.trim();
-      if (!raw) {
-        showErr("Paste Grafana dashboard JSON first.");
-        return;
-      }
-      let payload;
-      try {
-        payload = JSON.parse(raw);
-      } catch (e) {
-        showErr("Invalid JSON: " + e.message);
-        return;
-      }
-      const btn = document.getElementById("grafana-render-dash");
-      btn.disabled = true;
-      showErr("");
-      destroyDashboardCharts();
-      try {
-        const minutes = parseFloat(document.getElementById("minutes").value, 10);
-        const stepV = document.getElementById("step-select").value;
-        const body = { minutes, dashboard: payload };
-        if (stepV) body.step = stepV;
-        if (document.getElementById("include-flat").checked) body.include_flat = true;
-        const r = await fetch("/api/grafana/render-dashboard", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok) {
-          const d = j.detail;
-          showErr(
-            typeof d === "string"
-              ? d
-              : Array.isArray(d)
-                ? d.map((x) => x.msg || x).join("; ")
-                : r.statusText || "render-dashboard failed"
-          );
-          return;
-        }
-        document.getElementById("grafana-dash-note").textContent = j.note || "";
-        const mount = document.getElementById("grafana-dash-grid");
-        mount.innerHTML = "";
-        (j.panels || []).forEach((panel) => {
-          const gp = panel.gridPos || { x: 0, y: 0, w: 24, h: 8 };
-          const pel = document.createElement("div");
-          pel.className = "gf-dash-panel";
-          pel.style.gridColumn = gp.x + 1 + " / span " + gp.w;
-          pel.style.gridRow = gp.y + 1 + " / span " + gp.h;
-
-          const ht = document.createElement("h3");
-          ht.textContent = panel.title || "Panel";
-          pel.appendChild(ht);
-
-          (panel.targets || []).forEach((tgt) => {
-            const tb = document.createElement("div");
-            tb.className = "gf-target-block";
-            const ex = document.createElement("div");
-            ex.className = "gf-expr";
-            ex.textContent = tgt.expr || "";
-            tb.appendChild(ex);
-            if (tgt.smoothing_hint) {
-              const sh = document.createElement("div");
-              sh.className = "gf-smooth-hint";
-              sh.textContent = tgt.smoothing_hint;
-              tb.appendChild(sh);
-            }
-            if (tgt.error) {
-              const er = document.createElement("div");
-              er.className = "gf-err";
-              er.textContent = tgt.error;
-              tb.appendChild(er);
-            } else if (tgt.chart && tgt.chart.datasets && tgt.chart.datasets.length) {
-              mountCombinedChart(tb, tgt.chart, null, dashCharts, false);
-            } else {
-              const innerGrid = document.createElement("div");
-              innerGrid.className = "charts-grid";
-              appendPerSeriesCharts(innerGrid, tgt.per_series || [], dashCharts);
-              tb.appendChild(innerGrid);
-            }
-            pel.appendChild(tb);
-          });
-          mount.appendChild(pel);
-        });
-        document.getElementById("grafana-dash-section").hidden = false;
-        showEmpty("Dashboard rendered below. Prometheus step: " + (j.step || "—"));
-      } catch (e) {
-        showErr(String(e));
-      } finally {
-        btn.disabled = false;
-      }
-    });
-
-    document.getElementById("metrics-btn").addEventListener("click", async () => {
-      const btn = document.getElementById("metrics-btn");
-      btn.disabled = true;
-      try {
-        const r = await fetch("/api/metric-names?limit=5000");
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok) {
-          const d = j.detail;
-          showErr(typeof d === "string" ? d : (r.statusText || "metric-names failed"));
-          return;
-        }
-        const names = j.names || [];
-        fillMetricList(names);
-        showErr("");
-        if (names.length === 0) {
-          showEmpty(
-            "Prometheus returned zero metric names. The TSDB may be empty, or the label API failed. Check /api/diagnostics and that this Prometheus has scraped at least once."
-          );
-        } else {
-          showEmpty("Names appear below; click one to put it in the PromQL field (datalist also suggests while you type).");
-        }
-      } catch (e) {
-        showErr(String(e));
-      } finally {
-        btn.disabled = false;
-      }
-    });
-
-    function destroyCharts() {
-      charts.forEach((c) => c.destroy());
-      charts.length = 0;
-      grid.innerHTML = "";
-    }
-
-    async function loadChart() {
-      showErr("");
-      showEmpty("");
-      const minutes = parseFloat(document.getElementById("minutes").value, 10);
-      const query = document.getElementById("query").value.trim();
-      if (!query) {
-        showErr("Enter a PromQL query.");
-        return;
-      }
-      const btn = document.getElementById("load");
-      btn.disabled = true;
-      destroyCharts();
-      try {
-        const u = new URL("/api/range", window.location.origin);
-        u.searchParams.set("query", query);
-        u.searchParams.set("minutes", String(minutes));
-        const stepV = document.getElementById("step-select").value;
-        if (stepV) u.searchParams.set("step", stepV);
-        const res = await fetch(u);
-        const body = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          const d = body.detail;
-          showErr(typeof d === "string" ? d : (Array.isArray(d) ? d.map((x) => x.msg).join("; ") : res.statusText));
-          return;
-        }
-
-        meta.hidden = false;
-        document.getElementById("m-series").textContent = body.series_count ?? 0;
-        document.getElementById("m-points").textContent = body.total_points ?? 0;
-        document.getElementById("m-min").textContent = String(minutes);
-        document.getElementById("m-step").textContent = body.step ?? "—";
-
-        const per = body.per_series || [];
-        const c = body.chart;
-
-        if (!per.length && (!c || !c.datasets || !c.datasets.length)) {
-          showErr("");
-          showEmpty(
-            "No samples in this window for that query. Try: shorter \"Last\" time, a different PromQL, or confirm SigmaProm's PROMETHEUS_URL points to the same Prometheus that scrapes your test. Use \"Metric names\" to see what exists."
-          );
-          return;
-        }
-
-        const split = document.getElementById("split-per-series").checked;
-        if (split) {
-          appendPerSeriesCharts(grid, per, charts);
-        } else if (c && c.datasets && c.datasets.length) {
-          mountCombinedChart(
-            grid,
-            c,
-            document.getElementById("query").value.trim() + " · last " + minutes + " min",
-            charts,
-            true
-          );
-        } else {
-          appendPerSeriesCharts(grid, per, charts);
-        }
-      } catch (e) {
-        showErr(String(e));
-      } finally {
-        btn.disabled = false;
-      }
-    }
-
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      loadChart();
-    });
-    document.getElementById("split-per-series").addEventListener("change", () => loadChart());
-
-    refreshDiagnostics();
-    setInterval(refreshDiagnostics, 30000);
-    loadChart();
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/dashboard.js"></script>
 </body>
 </html>

@@ -23,9 +23,9 @@ def prometheus_base_url() -> str:
 
 
 def web_port() -> int:
-    raw = os.environ.get("WEB_PORT", "8001")
+    raw = os.environ.get("WEB_PORT", "3030")
     try:
         p = int(raw)
     except ValueError:
-        p = 8001
+        p = 3030
     return max(1, min(65535, p))

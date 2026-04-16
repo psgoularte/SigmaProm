@@ -66,6 +66,7 @@ def matrix_result_is_uninteresting(matrix_result: list[dict[str, Any]]) -> bool:
     """
     True when there is nothing useful to plot: no numeric samples, or a completely flat series
     (all identical values — includes all zeros and any other constant).
+    Only remove if truly constant and not varying at all.
     """
     vals: list[float] = []
     for item in matrix_result:
@@ -81,12 +82,8 @@ def matrix_result_is_uninteresting(matrix_result: list[dict[str, Any]]) -> bool:
                 continue
     if not vals:
         return True
-    lo, hi = min(vals), max(vals)
-    if lo == hi:
-        return True
-    span = hi - lo
-    scale = max(1.0, abs(hi), abs(lo))
-    if span < 1e-9 * scale:
+    # Only remove if all values are exactly the same
+    if len(set(vals)) == 1:
         return True
     return False
 
