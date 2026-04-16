@@ -1,4 +1,4 @@
-# prom-bench-stats
+# SigmaProm
 
 A small interface for loading Grafana dashboard JSON and rendering panels with Prometheus data via `query_range`.
 
