@@ -1,5 +1,5 @@
 [project]
-name = "hello"
+name = "prom-bench-stats"
 version = "0.1.0"
 description = ""
 authors = [
@@ -8,14 +8,18 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+    "fastapi>=0.115.0",
+    "httpx>=0.27.0",
+    "python-dotenv>=1.0.0",
+    "uvicorn[standard]>=0.32.0",
 ]
 
 [tool.poetry]
-packages = [{include = "hello", from = "src"}]
+packages = [{include = "prom_bench_stats", from = "src"}]
+
+[tool.poetry.scripts]
+prom-web = "prom_bench_stats.cli:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.scripts]
-hello-world = "hello.main:main"
