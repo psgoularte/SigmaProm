@@ -32,13 +32,6 @@ A comprehensive interface for analyzing Grafana dashboards with Prometheus data,
 - **Data export**: Individual "↓ CSV" buttons for downloading specific chart data
 - **Consistent grid**: Maintains 24-col layout matching original dashboard
 
-## Requirements
-
-- Python 3.9+
-- Poetry
-- Prometheus running and accessible
-- Pandas and NumPy (for statistical analysis)
-
 ## Installation
 
 ```bash
@@ -89,35 +82,6 @@ WEB_PORT=3030
 3. **Configure points**: Adjust number of interpolation points (10-500)
 4. **Analyze**: Click "Analyze Runs"
 
-## Useful Endpoints
-
-### Health and Diagnostics
-- `GET /api/health` — check service
-- `GET /api/diagnostics` — check Prometheus connectivity
-
-### Rendering
-- `POST /api/grafana/render-dashboard` — render real-time dashboard
-- `POST /api/grafana/statistical-analysis` — statistical analysis of multiple runs
-
-## Tests
-
-```bash
-poetry run pytest
-```
-
-## Usage Tips
-
-### For Benchmarks
-- **Constant metrics**: Smart filter keeps important charts even with zero values
-- **Relative windows**: Use 5m, 15m, 30m buttons for period analysis
-- **Noise analysis**: Use statistical analysis to identify patterns between runs
-- **Data export**: Use individual CSV buttons for detailed analysis
-
-### For Monitoring
-- **Real-time data**: Use dashboard for live monitoring
-- **Historical analysis**: Use statistical analysis for trend analysis
-- **Performance comparison**: Compare multiple benchmark runs statistically
-
 ## Architecture
 
 - **Backend**: FastAPI with Prometheus client
@@ -125,13 +89,12 @@ poetry run pytest
 - **Statistical**: Pandas + NumPy for data processing
 - **Export**: CSV download functionality for all chart data
 
-## Development
-
-```bash
-# Install dependencies
-poetry install
-│   │   ├── dashboard.js   # Real-time dashboard
-│   │   └── statistical.js # Statistical analysis
+### Project Structure
+```
+src/prom_bench_stats/
+├── api/
+│   ├── dashboard.js   # Real-time dashboard
+│   └── statistical.js # Statistical analysis
 ├── grafana_import.py      # Grafana dashboard parser
 ├── prometheus_fetch.py   # Prometheus client
 ├── statistical_analysis.py # Advanced statistical analysis
@@ -143,7 +106,6 @@ poetry install
 - **Frontend**: Chart.js, HTML5, CSS3
 - **Processing**: Pandas, NumPy
 - **Data**: Prometheus HTTP API
-```
 
 ## License
 
