@@ -98,8 +98,10 @@ async function renderGrafanaDashboard() {
   btn.disabled = true;
   try {
     const minutes = parseFloat(document.getElementById("minutes").value, 10);
-    const fromTime = parseLocalISO(document.getElementById("from-time").value);
-    const toTime = parseLocalISO(document.getElementById("to-time").value);
+    const fromTimeElement = document.getElementById("from-time");
+    const toTimeElement = document.getElementById("to-time");
+    const fromTime = fromTimeElement ? parseLocalISO(fromTimeElement.value) : null;
+    const toTime = toTimeElement ? parseLocalISO(toTimeElement.value) : null;
     const body = { dashboard: payload };
     if (fromTime && toTime) {
       body.from = fromTime;
@@ -228,8 +230,6 @@ document.querySelectorAll('.time-btn').forEach(btn => {
     document.getElementById('minutes').value = btn.dataset.minutes;
     currentWindowOffset = 0;
     updateWindowLabel();
-    document.getElementById('from-time').value = '';
-    document.getElementById('to-time').value = '';
   });
 });
 

@@ -14,6 +14,7 @@ from prom_bench_stats.prometheus_fetch import (
     range_step_for_window,
 )
 from prom_bench_stats.settings import prometheus_base_url
+from prom_bench_stats.statistical_analysis import analyze_multiple_runs
 
 router = APIRouter()
 
@@ -123,7 +124,9 @@ async def grafana_render_dashboard(body: dict[str, Any] = Body(...)):
                 continue
             data = payload.get("data") or {}
             result = data.get("result") or []
-            if not include_flat and matrix_result_is_uninteresting(result):
+            # Keep constant series even if they're all zeros (important for benchmarks)
+            # Only skip if truly no data points
+            if not include_flat and not result:
                 skipped_boring += 1
                 continue
             total_points = sum(len(item.get("values") or []) for item in result)
@@ -172,3 +175,70 @@ async def grafana_render_dashboard(body: dict[str, Any] = Body(...)):
         "include_flat": include_flat,
         "note": "".join(note_parts),
     }
+
+
+@router.post("/api/grafana/statistical-analysis")
+async def statistical_analysis(body: dict[str, Any] = Body(...)):
+    """
+    Perform statistical analysis across multiple benchmark runs.
+    Normalizes time series data to relative timeline and calculates mean ± std deviation.
+    """
+    # Extract parameters
+    dashboard = body.get("dashboard")
+    runs = body.get("runs", [])
+    step = body.get("step")
+    num_points = body.get("num_points")  # None enables auto-detection
+    
+    if not dashboard:
+        raise HTTPException(
+            status_code=400,
+            detail="Dashboard JSON is required"
+        )
+    
+    if not runs:
+        raise HTTPException(
+            status_code=400,
+            detail="Runs list is required"
+        )
+    
+    # Validate runs format
+    valid_runs = []
+    for run in runs:
+        if run.get("status") != "success":
+            continue
+            
+        timestamps = run.get("prometheus_timestamps", {})
+        start_ms = timestamps.get("start_ms")
+        finish_ms = timestamps.get("finish_ms")
+        
+        if not start_ms or not finish_ms:
+            continue
+            
+        valid_runs.append(run)
+    
+    if not valid_runs:
+        raise HTTPException(
+            status_code=400,
+            detail="No valid runs found. Each run must have status='success' and prometheus_timestamps with start_ms and finish_ms"
+        )
+    
+    try:
+        results = await analyze_multiple_runs(
+            dashboard=dashboard,
+            runs=valid_runs,
+            step=step,
+            num_points=num_points
+        )
+        
+        auto_detected_text = " (auto-detected)" if results.get('auto_detected', False) else ""
+        return {
+            "success": True,
+            "analysis": results,
+            "note": f"Statistical analysis completed for {results['total_runs']} runs with {results['num_points']}{auto_detected_text} interpolated points per series."
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Statistical analysis failed: {str(e)}"
+        )
