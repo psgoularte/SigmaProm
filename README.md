@@ -52,6 +52,14 @@ WEB_PORT=3030
 
 ## Usage
 
+### Running the Application
+
+```bash
+poetry run prom-web
+```
+
+The application will start on `http://localhost:3030` (or the port configured in `.env`).
+
 ### Real-time Dashboard
 1. **Export dashboard**: In Grafana: Share → JSON Model / Export JSON
 2. **Paste JSON**: Paste in the main interface field

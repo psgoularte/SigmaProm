@@ -43,6 +43,9 @@ async function renderStatisticalAnalysis() {
   btn.disabled = true;
   btn.textContent = "Analyzing...";
   
+  // Array to store charts with no data
+  const noDataCharts = [];
+  
   try {
     const stepV = document.getElementById("step-select").value;
     const body = {
@@ -98,32 +101,24 @@ async function renderStatisticalAnalysis() {
       // Process each target in the panel
       (panel.targets || []).forEach((target, targetIndex) => {
         if (target.error) {
-          const tb = document.createElement("div");
-          tb.className = "gf-target-block";
-          const ex = document.createElement("div");
-          ex.className = "gf-expr";
-          ex.textContent = target.expr || "";
-          tb.appendChild(ex);
-          const er = document.createElement("div");
-          er.className = "gf-err";
-          er.textContent = target.error;
-          tb.appendChild(er);
-          panelEl.appendChild(tb);
+          // Add to no data list
+          const chartName = target.legendFormat || target.expr || `Target ${targetIndex + 1}`;
+          noDataCharts.push({
+            panel: panel.title || 'Unknown Panel',
+            chart: chartName,
+            error: target.error
+          });
           return;
         }
         
         if (!target.statistics || !target.statistics.datasets) {
-          const tb = document.createElement("div");
-          tb.className = "gf-target-block";
-          const ex = document.createElement("div");
-          ex.className = "gf-expr";
-          ex.textContent = target.expr || "";
-          tb.appendChild(ex);
-          const nd = document.createElement("div");
-          nd.className = "gf-no-data";
-          nd.textContent = "No statistical data available";
-          tb.appendChild(nd);
-          panelEl.appendChild(tb);
+          // Add to no data list
+          const chartName = target.legendFormat || target.expr || `Target ${targetIndex + 1}`;
+          noDataCharts.push({
+            panel: panel.title || 'Unknown Panel',
+            chart: chartName,
+            error: 'No statistical data available'
+          });
           return;
         }
         
@@ -143,47 +138,22 @@ async function renderStatisticalAnalysis() {
         info.textContent = `${stats.num_runs} runs · ${stats.sample_count} samples/point · ${analysis.num_points} interpolated points`;
         tb.appendChild(info);
         
+        // Add CSV button after info
+        const downloadBtn = document.createElement("button");
+        downloadBtn.className = "csv-download-btn";
+        downloadBtn.innerHTML = "↓ CSV";
+        downloadBtn.title = "Download this chart as CSV";
+        downloadBtn.onclick = () => downloadIndividualChartCsv(target, stats, analysis, targetIndex);
+        tb.appendChild(downloadBtn);
+        
         // Create chart container
         const chartContainer = document.createElement("div");
         chartContainer.className = "gf-chart-combined";
-        chartContainer.style.position = "relative";
         const inner = document.createElement("div");
         inner.className = "chart-inner";
         const canvas = document.createElement("canvas");
         inner.appendChild(canvas);
         chartContainer.appendChild(inner);
-        
-        // Add download button for individual chart
-        const downloadBtn = document.createElement("button");
-        downloadBtn.className = "btn btn-small";
-        downloadBtn.innerHTML = "↓ CSV";
-        downloadBtn.style.cssText = `
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          padding: 6px 12px;
-          font-size: 0.7rem;
-          font-weight: 500;
-          background: rgba(0, 0, 0, 0.7);
-          color: white;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          z-index: 10;
-          transition: all 0.2s ease;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        `;
-        downloadBtn.title = "Download this chart as CSV";
-        downloadBtn.onmouseover = () => {
-          downloadBtn.style.background = "rgba(0, 0, 0, 0.85)";
-          downloadBtn.style.transform = "translateY(-1px)";
-        };
-        downloadBtn.onmouseout = () => {
-          downloadBtn.style.background = "rgba(0, 0, 0, 0.7)";
-          downloadBtn.style.transform = "translateY(0)";
-        };
-        downloadBtn.onclick = () => downloadIndividualChartCsv(target, stats, analysis, targetIndex);
-        chartContainer.appendChild(downloadBtn);
         
         tb.appendChild(chartContainer);
         
@@ -198,6 +168,12 @@ async function renderStatisticalAnalysis() {
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: "index", intersect: false },
+            elements: {
+              point: {
+                radius: stats.labels.length > 50 ? 0 : 1,
+                hoverRadius: 3
+              }
+            },
             plugins: {
               legend: {
                 display: true,
@@ -243,13 +219,19 @@ async function renderStatisticalAnalysis() {
       grid.appendChild(panelEl);
     });
     
+    // Update data log with charts that have no data
+    updateDataLog(noDataCharts);
+    
     document.getElementById("statistical-results-section").hidden = false;
     
     // Store response for CSV download
     window.currentStatisticalResponse = j;
     
     // Show download buttons
-    document.getElementById("download-buttons").style.display = "block";
+    const downloadButtons = document.getElementById("download-buttons");
+    if (downloadButtons) {
+      downloadButtons.style.display = "block";
+    }
     
     showEmpty(`Statistical analysis completed for ${analysis.total_runs} runs`);
     
@@ -269,6 +251,36 @@ document.getElementById("grafana-json").addEventListener("input", (e) => {
 
 
 document.getElementById("statistical-render-btn").addEventListener("click", renderStatisticalAnalysis);
+
+// Function to update data log with charts that have no data
+function updateDataLog(noDataCharts) {
+  const dataLogSection = document.getElementById("data-log");
+  const dataLogList = document.getElementById("data-log-list");
+  
+  if (!dataLogSection || !dataLogList) return;
+  
+  // Clear previous log entries
+  dataLogList.innerHTML = "";
+  
+  if (noDataCharts.length === 0) {
+    const emptyMessage = document.createElement("div");
+    emptyMessage.className = "data-log-empty";
+    emptyMessage.textContent = "All charts have data successfully loaded.";
+    dataLogList.appendChild(emptyMessage);
+    dataLogSection.hidden = true;
+    return;
+  }
+  
+  // Show log section and add entries
+  dataLogSection.hidden = false;
+  
+  noDataCharts.forEach((item, index) => {
+    const logItem = document.createElement("div");
+    logItem.className = "data-log-item";
+    logItem.innerHTML = `<strong>Panel:</strong> ${item.panel}<br><strong>Chart:</strong> ${item.chart}<br><strong>Reason:</strong> ${item.error}`;
+    dataLogList.appendChild(logItem);
+  });
+}
 
 // CSV download functionality
 function escapeCsvField(field) {

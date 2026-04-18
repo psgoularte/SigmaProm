@@ -147,25 +147,18 @@ function chartOpts(title, color) {
 }
 
 async function refreshDiagnostics() {
-  console.log("refreshDiagnostics called");
   const dot = document.getElementById("conn-dot");
   const text = document.getElementById("conn-text");
   const urlEl = document.getElementById("prom-url");
-  console.log("Elements found:", !!dot, !!text, !!urlEl);
   try {
-    console.log("Fetching /api/diagnostics...");
     const r = await fetch("/api/diagnostics");
-    console.log("Response status:", r.status);
     const d = await r.json();
-    console.log("Response data:", d);
     urlEl.textContent = d.prometheus_url || "";
     if (d.error || !d.reachable) {
-      console.log("Prometheus unreachable:", d.error, d.reachable);
       dot.className = "dot bad";
       text.textContent = d.error ? "Cannot reach Prometheus" : "Unreachable";
       return;
     }
-    console.log("Prometheus reachable, updating UI");
     dot.className = "dot ok";
     const n = d.instant_up_series;
     const mcount = d.metric_name_count;
@@ -173,9 +166,7 @@ async function refreshDiagnostics() {
       n != null
         ? `Scrape targets (up): ${n} · Metric names: ${mcount ?? "?"}`
         : "Connected";
-    console.log("UI updated successfully");
   } catch (e) {
-    console.error("Diagnostics failed:", e);
     document.getElementById("conn-dot").className = "dot bad";
     document.getElementById("conn-text").textContent = "Diagnostics failed";
   }

@@ -10,14 +10,14 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
   <style>
     :root {
-      --bg0: #07060d;
-      --bg1: #12101c;
-      --card: #1a1729;
-      --border: rgba(139, 92, 246, 0.22);
-      --text: #f4f0ff;
-      --muted: #9b92b8;
-      --accent: #a78bfa;
-      --accent2: #6366f1;
+      --bg0: #0a0816;
+      --bg1: #16132a;
+      --card: #1f1b35;
+      --border: rgba(139, 92, 246, 0.25);
+      --text: #f8f5ff;
+      --muted: #a89bca;
+      --accent: #b19cfc;
+      --accent2: #7c3aed;
       --ok: #4ade80;
       --warn: #fbbf24;
       --bad: #fb7185;
@@ -30,9 +30,11 @@
       margin: 0;
       min-height: 100vh;
       background:
-        radial-gradient(ellipse 120% 80% at 10% -20%, rgba(99, 102, 241, 0.25), transparent 50%),
-        radial-gradient(ellipse 80% 50% at 100% 0%, rgba(167, 139, 250, 0.15), transparent 45%),
+        radial-gradient(ellipse 120% 80% at 10% -20%, rgba(124, 58, 237, 0.15), transparent 50%),
+        radial-gradient(ellipse 80% 50% at 100% 0%, rgba(167, 139, 250, 0.12), transparent 45%),
+        radial-gradient(ellipse 60% 40% at 50% 100%, rgba(99, 102, 241, 0.08), transparent 40%),
         var(--bg0);
+      background-attachment: fixed;
     }
     .shell { max-width: 1320px; margin: 0 auto; padding: 1.75rem 1.25rem 3rem; }
     header {
@@ -71,41 +73,122 @@
     .panel {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.15rem 1.25rem;
-      margin-bottom: 1.25rem;
+      border-radius: 16px;
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
     }
-    .controls { display: flex; flex-wrap: wrap; gap: 0.85rem; align-items: flex-end; }
-    .time-controls { display: flex; flex-direction: column; gap: 0.35rem; }
-    .time-label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.78rem; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-    .time-buttons { display: flex; gap: 0.25rem; flex-wrap: wrap; }
-    .time-btn { padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg1); color: var(--muted); cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s; }
-    .time-btn:hover { border-color: var(--accent); color: var(--text); }
-    .time-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .window-controls { display: flex; align-items: center; gap: 0.5rem; }
-    #window-label { font-size: 0.85rem; color: var(--text); white-space: nowrap; }
+    .panel:hover {
+      border-color: rgba(139, 92, 246, 0.35);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+    .controls { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-end; justify-content: space-between; }
+    .controls-group { display: flex; flex-wrap: wrap; gap: 1.2rem; align-items: flex-end; flex: 1; }
+    .time-controls { display: flex; flex-direction: column; gap: 0.5rem; }
+    .time-label { display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.78rem; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .time-buttons { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+    .time-btn {
+      padding: 0.5rem 0.8rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg1);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+      position: relative;
+      min-width: 45px;
+      text-align: center;
+    }
+    .time-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    .time-btn.active {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 2px 10px rgba(139, 92, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    .window-controls { display: flex; align-items: center; gap: 0.8rem; margin-top: 0.5rem; }
+    #window-label { font-size: 0.85rem; color: var(--text); white-space: nowrap; padding: 0.3rem 0.6rem; background: var(--bg1); border-radius: 6px; border: 1px solid var(--border); }
     label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.78rem; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
     input {
-      padding: 0.55rem 0.75rem;
-      border-radius: 10px;
+      padding: 0.65rem 0.85rem;
+      border-radius: 12px;
       border: 1px solid rgba(139, 92, 246, 0.35);
       background: var(--bg1);
       color: var(--text);
       font-size: 0.95rem;
       font-family: inherit;
       min-width: 5rem;
+      transition: all 0.2s ease;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+    .csv-download-btn {
+      position: relative;
+      top: auto;
+      right: auto;
+      z-index: 20;
+      padding: 6px 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6));
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+      margin-left: 0.5rem;
+    }
+    .csv-download-btn:hover {
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.7));
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .csv-download-btn:active {
+      transform: translateY(0);
     }
     button {
       cursor: pointer;
-      padding: 0.55rem 1.1rem;
-      border-radius: 10px;
+      padding: 0.65rem 1.25rem;
+      border-radius: 12px;
       border: none;
       font-family: inherit;
       font-weight: 600;
       font-size: 0.9rem;
-      background: linear-gradient(135deg, var(--accent2), #7c3aed);
+      background: linear-gradient(135deg, var(--accent2), #8b5cf6);
       color: #fff;
-      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+      box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4), 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+    button:hover::before {
+      left: 100%;
     }
     button.secondary {
       background: transparent;
@@ -115,7 +198,11 @@
       font-weight: 500;
     }
     button:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
-    button:hover:not(:disabled) { filter: brightness(1.08); }
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5), 0 1px 0 rgba(255, 255, 255, 0.15) inset;
+      filter: brightness(1.1);
+    }
 
     .meta-row {
       display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem;
@@ -133,11 +220,29 @@
     .chart-card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1rem 1.1rem;
+      border-radius: 16px;
+      padding: 1.25rem 1.35rem;
       min-height: 320px;
       display: flex;
       flex-direction: column;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .chart-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent);
+    }
+    .chart-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(139, 92, 246, 0.4);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
     .chart-card--large {
       min-height: 480px;
@@ -330,8 +435,65 @@
       margin-top: 0.35rem;
     }
     select#step-select {
-      min-width: 5.5rem;
+      min-width: 6rem;
       cursor: pointer;
+      padding: 0.65rem 0.85rem;
+      border-radius: 12px;
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      background: var(--bg1);
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+    select#step-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2), inset 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+    .data-log {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+    }
+    .data-log h4 {
+      margin: 0 0 0.75rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .data-log-item {
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.5rem;
+      border-radius: 8px;
+      background: rgba(251, 113, 133, 0.1);
+      border: 1px solid rgba(251, 113, 133, 0.2);
+      color: #fecaca;
+      font-family: ui-monospace, monospace;
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+    .data-log-item:last-child {
+      margin-bottom: 0;
+    }
+    .gf-chart-group-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #c4b5fd;
+      margin-top: 1.5rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+    }
+    .gf-chart-container {
+      margin-bottom: 1.5rem;
+    }
+    .gf-chart-container:last-child {
+      margin-bottom: 0;
     }
   </style>
 </head>
@@ -354,41 +516,43 @@
     <div class="panel">
       <form class="controls" id="form">
         <input type="hidden" id="minutes" value="5" />
-        <div class="time-controls">
-          <label class="time-label">
-            Time Window
-            <div class="time-buttons">
-              <button type="button" class="time-btn active" data-minutes="5">5m</button>
-              <button type="button" class="time-btn" data-minutes="15">15m</button>
-              <button type="button" class="time-btn" data-minutes="30">30m</button>
-              <button type="button" class="time-btn" data-minutes="60">1h</button>
-              <button type="button" class="time-btn" data-minutes="360">6h</button>
-              <button type="button" class="time-btn" data-minutes="1440">1d</button>
+        <div class="controls-group">
+          <div class="time-controls">
+            <label class="time-label">
+              Time Window
+              <div class="time-buttons">
+                <button type="button" class="time-btn active" data-minutes="5">5m</button>
+                <button type="button" class="time-btn" data-minutes="15">15m</button>
+                <button type="button" class="time-btn" data-minutes="30">30m</button>
+                <button type="button" class="time-btn" data-minutes="60">1h</button>
+                <button type="button" class="time-btn" data-minutes="360">6h</button>
+                <button type="button" class="time-btn" data-minutes="1440">1d</button>
+              </div>
+            </label>
+            <div class="window-controls">
+              <button type="button" id="shift-back" class="secondary" title="Move window back">◀◀</button>
+              <span id="window-label">Last 30m</span>
+              <button type="button" id="shift-forward" class="secondary" title="Move window forward">▶▶</button>
             </div>
-          </label>
-          <div class="window-controls">
-            <button type="button" id="shift-back" class="secondary" title="Move window back">◀◀</button>
-            <span id="window-label">Last 30m</span>
-            <button type="button" id="shift-forward" class="secondary" title="Move window forward">▶▶</button>
           </div>
+          <label>
+            Step
+            <select id="step-select" title="Prometheus query_range step (smaller = more raw points)">
+              <option value="">Auto</option>
+              <option value="1s">1s</option>
+              <option value="5s">5s</option>
+              <option value="10s">10s</option>
+              <option value="15s">15s</option>
+              <option value="30s">30s</option>
+              <option value="60s">60s</option>
+              <option value="120s">120s</option>
+            </select>
+          </label>
+          <label class="row-inline" style="align-items: center; gap: 0.5rem;">
+            <input type="checkbox" id="auto-refresh" checked />
+            Auto refresh
+          </label>
         </div>
-        <label>
-          Step
-          <select id="step-select" title="Prometheus query_range step (smaller = more raw points)">
-            <option value="">Auto</option>
-            <option value="1s">1s</option>
-            <option value="5s">5s</option>
-            <option value="10s">10s</option>
-            <option value="15s">15s</option>
-            <option value="30s">30s</option>
-            <option value="60s">60s</option>
-            <option value="120s">120s</option>
-          </select>
-        </label>
-        <label class="row-inline" style="align-items: center; gap: 0.5rem;">
-          <input type="checkbox" id="auto-refresh" checked />
-          Auto refresh
-        </label>
         <button type="submit" id="grafana-render-dash">Render dashboard</button>
       </form>
 
@@ -436,7 +600,11 @@
       <p id="statistical-note" class="hint-box" style="margin-top: 0;"></p>
       <div id="statistical-dash-grid" style="display: grid; grid-template-columns: repeat(24, 1fr); gap: 0.75rem; grid-auto-rows: minmax(80px, auto); align-items: start;"></div>
       
-          </div>
+      <div class="data-log" id="data-log" hidden>
+        <h4>Charts with No Data</h4>
+        <div id="data-log-list"></div>
+      </div>
+    </div>
 
     <h2 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 0.65rem; font-weight: 600;">Chart</h2>
     <p style="font-size: 0.8rem; color: var(--muted); margin: -0.35rem 0 0.75rem;">All series in one view with distinct colors (legend below when there are multiple).</p>
