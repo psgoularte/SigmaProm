@@ -1,158 +1,150 @@
 # SigmaProm
 
-Uma interface completa para análise de dashboards Grafana com dados do Prometheus, incluindo análise estatística avançada de múltiplas execuções de benchmark.
+A comprehensive interface for analyzing Grafana dashboards with Prometheus data, including advanced statistical analysis of multiple benchmark runs.
 
-## Funcionalidades
+## Features
 
-### Dashboard em Tempo Real
-- **Importação de dashboards**: Carrega JSON exportado do Grafana
-- **Renderização em tempo real**: Exibe gráficos com dados brutos do Prometheus via `query_range`
-- **Layout responsivo**: Grid 24-col igual ao Grafana
-- **Filtro inteligente**: Mantém gráficos constantes (mesmo que zero) para benchmarks
+### Real-time Dashboard
+- **Dashboard import**: Load JSON exported from Grafana
+- **Real-time rendering**: Display charts with raw Prometheus data via `query_range`
+- **Responsive layout**: 24-column grid matching Grafana
+- **Smart filtering**: Keeps constant charts (even if zero) for benchmarks
 
-### Análise Estatística Avançada
-- **Múltiplas execuções**: Processa array de runs com timestamps
-- **Normalização temporal**: Converte execuções com durações diferentes para eixo relativo (0% a 100%)
-- **Interpolação inteligente**: Garante mesmo número de pontos entre execuções
-- **Estatísticas robustas**: Calcula média ± desvio padrão ponto a ponto
-- **Visualização avançada**: Área sombreada mostrando intervalos de confiança
-- **Exportação CSV**: Botões individuais em cada gráfico para download de dados específicos
+### Advanced Statistical Analysis
+- **Multiple runs**: Process array of runs with timestamps
+- **Temporal normalization**: Convert runs with different durations to relative timeline (0% to 100%)
+- **Smart interpolation**: Ensures same number of points across runs
+- **Robust statistics**: Calculate mean ± standard deviation point-by-point
+- **Advanced visualization**: Shaded area showing confidence intervals
+- **CSV export**: Individual download buttons for each chart data
 
-## Comportamento dos Gráficos
+## Chart Behavior
 
-### Tempo Real
-- Os gráficos **não aplicam médias móveis** no app ou UI
-- Renderizam **dados brutos** retornados pelo Prometheus via `query_range`, ponto por ponto
-- Se a query Grafana usa `avg_over_time`, `rate()`, `quantile_over_time()`, ou outras funções de janela PromQL, esses valores já são computados pelo Prometheus
+### Real-time
+- Charts **do not apply moving averages** in the app or UI
+- **Render raw data** returned by Prometheus via `query_range`, point by point
+- If Grafana query uses `avg_over_time`, `rate()`, `quantile_over_time()`, or other PromQL window functions, these values are already computed by Prometheus
 
-### Análise Estatística
-- **Normalização**: Todas as execuções são normalizadas para timeline relativa
-- **Interpolação**: Usa número configurável de pontos (padrão: 100)
-- **Área sombreada**: Visualiza média ± desvio padrão para análise de ruído
-- **Exportação de dados**: Botões "↓ CSV" em cada gráfico para download individual dos dados
-- **Grid consistente**: Mantém layout 24-col igual ao dashboard original
+### Statistical Analysis
+- **Normalization**: All runs are normalized to relative timeline
+- **Interpolation**: Uses configurable number of points (default: 100)
+- **Shaded area**: Visualizes mean ± standard deviation for noise analysis
+- **Data export**: Individual "↓ CSV" buttons for downloading specific chart data
+- **Consistent grid**: Maintains 24-col layout matching original dashboard
 
-## Requisitos
+## Requirements
 
 - Python 3.9+
 - Poetry
-- Prometheus rodando e acessível
-- Pandas e NumPy (para análise estatística)
+- Prometheus running and accessible
+- Pandas and NumPy (for statistical analysis)
 
-## Instalação
+## Installation
 
 ```bash
 poetry install
 cp .env.example .env
 ```
 
-Edite `.env` se o Prometheus não estiver em `http://127.0.0.1:9090`.
+Edit `.env` if Prometheus is not at `http://127.0.0.1:9090`.
 
-## Configuração
+## Configuration
 
-No `.env`, configure:
+In `.env`, configure:
 
 ```env
 PROMETHEUS_URL=http://127.0.0.1:9090
 WEB_PORT=3030
 ```
 
-## Execução
+## Usage
 
-```bash
-poetry run prom-web
-```
+### Real-time Dashboard
+1. **Export dashboard**: In Grafana: Share → JSON Model / Export JSON
+2. **Paste JSON**: Paste in the main interface field
+3. **Configure window**: Adjust time window (5m, 15m, 30m, 1h, 6h, 1d)
+4. **Render**: Click "Render dashboard"
 
-Abra `http://127.0.0.1:3030` no seu navegador.
-
-## Como Usar
-
-### Dashboard em Tempo Real
-1. **Exporte dashboard**: No Grafana: Share → JSON Model / Export JSON
-2. **Cole o JSON**: Cole no campo principal da interface
-3. **Configure janela**: Ajuste janela de tempo (5m, 15m, 30m, 1h, 6h, 1d)
-4. **Renderize**: Clique em "Render dashboard"
-
-### Análise Estatística
-1. **Cole dashboard**: Use o mesmo JSON do dashboard acima
-2. **Adicione runs**: Cole array JSON com execuções do benchmark:
+### Statistical Analysis
+1. **Paste dashboard**: Use the same dashboard JSON as above
+2. **Add runs**: Paste JSON array with benchmark executions:
    ```json
    [
      {
        "status": "success",
        "prometheus_timestamps": {
-         "start_ms": 1776488154750,
-         "finish_ms": 1776488291033
-       },
-       "readable": {
-         "start": "2026-04-18T04:55:54Z",
-         "finish": "2026-04-18T04:58:11Z",
-         "duration_ms": 136283
+         "start_ms": 1704067200000,
+         "finish_ms": 1704067260000
+       }
+     },
+     {
+       "status": "success", 
+       "prometheus_timestamps": {
+         "start_ms": 1704067320000,
+         "finish_ms": 1704067380000
        }
      }
    ]
    ```
-3. **Configure pontos**: Ajuste número de pontos de interpolação (10-500)
-4. **Analise**: Clique em "Analyze Runs"
+3. **Configure points**: Adjust number of interpolation points (10-500)
+4. **Analyze**: Click "Analyze Runs"
 
-## Endpoints Úteis
+## Useful Endpoints
 
-### Saúde e Diagnóstico
-- `GET /api/health` — verifica serviço
-- `GET /api/diagnostics` — verifica conectividade Prometheus
+### Health and Diagnostics
+- `GET /api/health` — check service
+- `GET /api/diagnostics` — check Prometheus connectivity
 
-### Renderização
-- `POST /api/grafana/render-dashboard` — renderiza dashboard em tempo real
-- `POST /api/grafana/statistical-analysis` — análise estatística de múltiplas execuções
+### Rendering
+- `POST /api/grafana/render-dashboard` — render real-time dashboard
+- `POST /api/grafana/statistical-analysis` — statistical analysis of multiple runs
 
-## Testes
+## Tests
 
 ```bash
 poetry run pytest
 ```
 
-## Dicas de Uso
+## Usage Tips
 
-### Para Benchmarks
-- **Métricas constantes**: O filtro inteligente mantém gráficos importantes mesmo com valores zero
-- **Janelas relativas**: Use botões 5m, 15m, 30m para análise de períodos
-- **Análise de ruído**: Use análise estatística para identificar padrões entre execuções
+### For Benchmarks
+- **Constant metrics**: Smart filter keeps important charts even with zero values
+- **Relative windows**: Use 5m, 15m, 30m buttons for period analysis
+- **Noise analysis**: Use statistical analysis to identify patterns between runs
+- **Data export**: Use individual CSV buttons for detailed analysis
 
-### Para Análise Estatística
-- **Número de pontos**: 50-300 pontos para interpolação (padrão: 100)
-- **Execuções consistentes**: Todas as runs devem ter `status: "success"`
-- **Timestamps precisos**: Use `prometheus_timestamps.start_ms` e `finish_ms`
+### For Monitoring
+- **Real-time data**: Use dashboard for live monitoring
+- **Historical analysis**: Use statistical analysis for trend analysis
+- **Performance comparison**: Compare multiple benchmark runs statistically
 
-## Notas
+## Architecture
 
-- A janela de tempo padrão é `5m`
-- O sistema usa **grid 24-col** para layout consistente com Grafana
-- **Auto-detecção** disponível para pontos ótimos de interpolação
-- **Área sombreada** mostra intervalos de confiança de ±1 desvio padrão
+- **Backend**: FastAPI with Prometheus client
+- **Frontend**: Vanilla JavaScript with Chart.js
+- **Statistical**: Pandas + NumPy for data processing
+- **Export**: CSV download functionality for all chart data
 
-## Desenvolvimento
+## Development
 
-### Estrutura do Projeto
-```
-src/prom_bench_stats/
-├── api/
-│   ├── dashboard.py      # Endpoints de renderização
-│   ├── health.py        # Saúde do serviço
-│   └── metrics.py       # Métricas da aplicação
-├── static/
-│   ├── index.html       # Interface principal
-│   ├── js/
-│   │   ├── app.js         # Controles gerais
-│   │   ├── dashboard.js   # Dashboard em tempo real
-│   │   └── statistical.js # Análise estatística
-├── grafana_import.py      # Parser de dashboards Grafana
-├── prometheus_fetch.py   # Cliente Prometheus
-├── statistical_analysis.py # Análise estatística avançada
-└── settings.py           # Configurações
+```bash
+# Install dependencies
+poetry install
+│   │   ├── dashboard.js   # Real-time dashboard
+│   │   └── statistical.js # Statistical analysis
+├── grafana_import.py      # Grafana dashboard parser
+├── prometheus_fetch.py   # Prometheus client
+├── statistical_analysis.py # Advanced statistical analysis
+└── settings.py           # Configuration
 ```
 
-### Tecnologias
+### Technologies
 - **Backend**: FastAPI, Python 3.9+
 - **Frontend**: Chart.js, HTML5, CSS3
-- **Processamento**: Pandas, NumPy
-- **Dados**: Prometheus HTTP API
+- **Processing**: Pandas, NumPy
+- **Data**: Prometheus HTTP API
+```
+
+## License
+
+MIT License - see LICENSE file for details.
