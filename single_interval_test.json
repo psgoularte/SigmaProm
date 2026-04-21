@@ -1,0 +1,14 @@
+[
+    {
+        "status": "success",
+        "prometheus_timestamps": {
+            "start_ms": 1776645644812,
+            "finish_ms": 1776645811235
+        },
+        "readable": {
+            "start": "2026-04-20T00:40:44Z",
+            "finish": "2026-04-20T00:43:31Z",
+            "duration_ms": 166423
+        }
+    }
+]

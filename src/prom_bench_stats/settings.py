@@ -20,12 +20,3 @@ else:
 
 def prometheus_base_url() -> str:
     return os.environ.get("PROMETHEUS_URL", "http://127.0.0.1:9090").rstrip("/")
-
-
-def web_port() -> int:
-    raw = os.environ.get("WEB_PORT", "3030")
-    try:
-        p = int(raw)
-    except ValueError:
-        p = 3030
-    return max(1, min(65535, p))

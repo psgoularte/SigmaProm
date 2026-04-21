@@ -98,7 +98,82 @@ def iter_grafana_panels(dashboard: dict[str, Any]) -> list[dict[str, Any]]:
                 }
             )
 
-    walk(dashboard.get("panels"))
+
+def iter_grafana_panels_with_sections(dashboard: dict[str, Any]) -> list[dict[str, Any]]:
+    """
+    Iterate through dashboard panels preserving row/section hierarchy.
+    
+    Each entry includes: ``title``, ``type``, ``section``, ``targets`` list of ``{expr, legendFormat}``.
+    Row panels are included to mark section boundaries.
+    
+    Generic implementation that works with any Grafana dashboard JSON structure.
+    """
+    out: list[dict[str, Any]] = []
+    current_section = "general"
+    
+    panels = dashboard.get("panels", [])
+    for p in panels:
+        if not isinstance(p, dict):
+            continue
+        
+        panel_title = (p.get("title") or "").strip() or "Panel"
+        panel_type = p.get("type") or "graph"
+        
+        if panel_type == "row":
+            # Update current section when we hit a row
+            # Make section name generic and safe for filesystem
+            current_section = (
+                panel_title.lower()
+                .replace(' ', '_')
+                .replace('-', '_')
+                .replace('/', '_')
+                .replace('\\', '_')
+                .replace(':', '_')
+                .replace('é', 'e')
+                .replace('á', 'a')
+                .replace('í', 'i')
+                .replace('ó', 'o')
+                .replace('ú', 'u')
+                .replace('ñ', 'n')
+                .replace('__', '_')
+                .strip('_')
+            )
+            out.append({
+                "id": p.get("id"),
+                "title": panel_title,
+                "type": "row",
+                "section": current_section,
+                "targets": [],
+            })
+            continue
+            
+        targets_raw = p.get("targets") or []
+        targets: list[dict[str, str]] = []
+        for t in targets_raw:
+            if not isinstance(t, dict):
+                continue
+            ex = (t.get("expr") or t.get("query") or "").strip()
+            if not ex:
+                continue
+            targets.append(
+                {
+                    "expr": ex,
+                    "legendFormat": (t.get("legendFormat") or t.get("legend") or "") or "",
+                }
+            )
+        
+        if not targets:
+            continue
+            
+        out.append({
+            "id": p.get("id"),
+            "title": panel_title,
+            "type": panel_type,
+            "section": current_section,
+            "gridPos": _normalize_grid_pos(p.get("gridPos")),
+            "targets": targets,
+        })
+    
     return out
 
 
